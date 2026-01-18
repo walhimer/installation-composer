@@ -1,0 +1,1578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Installation Composer - Mark Walhimer</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+
+        #root {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+        }
+
+        .app-container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        .sidebar {
+            width: 320px;
+            background: #1a1a1a;
+            border-right: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #333;
+        }
+
+        .sidebar-header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #fff;
+        }
+
+        .sidebar-header .subtitle {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .sidebar-header p {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .sidebar-tabs {
+            display: flex;
+            border-bottom: 1px solid #333;
+        }
+
+        .sidebar-tab {
+            flex: 1;
+            padding: 12px;
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            font-size: 13px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .sidebar-tab:hover {
+            color: #fff;
+            background: #222;
+        }
+
+        .sidebar-tab.active {
+            color: #fff;
+            border-bottom-color: #4a9eff;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .file-browser {
+            font-size: 13px;
+        }
+
+        .folder {
+            margin-bottom: 12px;
+        }
+
+        .folder-header {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .folder-header:hover {
+            background: #252525;
+        }
+
+        .folder-icon {
+            margin-right: 8px;
+            color: #4a9eff;
+        }
+
+        .folder-name {
+            font-weight: 500;
+            color: #fff;
+            flex: 1;
+        }
+
+        .folder-count {
+            font-size: 11px;
+            color: #666;
+        }
+
+        .folder-items {
+            margin-left: 20px;
+            margin-top: 4px;
+        }
+
+        .sketch-item {
+            padding: 8px;
+            margin: 4px 0;
+            background: #222;
+            border-radius: 4px;
+            cursor: grab;
+            border: 1px solid #333;
+            transition: all 0.2s;
+        }
+
+        .sketch-item:hover {
+            background: #2a2a2a;
+            border-color: #4a9eff;
+            transform: translateX(4px);
+        }
+
+        .sketch-item:active {
+            cursor: grabbing;
+        }
+
+        .sketch-name {
+            font-size: 12px;
+            color: #e0e0e0;
+            margin-bottom: 4px;
+        }
+
+        .sketch-path {
+            font-size: 10px;
+            color: #666;
+        }
+
+        .blocks-palette {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .palette-block {
+            padding: 20px;
+            background: #222;
+            border: 2px dashed #444;
+            border-radius: 8px;
+            text-align: center;
+            cursor: grab;
+            transition: all 0.2s;
+        }
+
+        .palette-block:hover {
+            background: #2a2a2a;
+            border-color: #4a9eff;
+            transform: translateY(-2px);
+        }
+
+        .palette-block:active {
+            cursor: grabbing;
+        }
+
+        .palette-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .palette-label {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .palette-desc {
+            font-size: 11px;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            background: #0f0f0f;
+            overflow: hidden;
+        }
+
+        .canvas-toolbar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .canvas-toolbar > * {
+            pointer-events: auto;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 8px;
+            background: #1a1a1aee;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            backdrop-filter: blur(10px);
+        }
+
+        .toolbar-button {
+            padding: 8px 16px;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .toolbar-button:hover {
+            background: #333;
+            border-color: #4a9eff;
+        }
+
+        .toolbar-button:active {
+            transform: scale(0.98);
+        }
+
+        .toolbar-button.primary {
+            background: #4a9eff;
+            border-color: #4a9eff;
+            color: #fff;
+        }
+
+        .toolbar-button.primary:hover {
+            background: #3a8eef;
+        }
+
+        .toolbar-button.danger {
+            background: #ff4a4a;
+            border-color: #ff4a4a;
+            color: #fff;
+        }
+
+        .toolbar-button.danger:hover {
+            background: #ef3a3a;
+        }
+
+        .project-name {
+            color: #fff;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .properties-panel {
+            width: 300px;
+            background: #1a1a1a;
+            border-left: 1px solid #333;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .properties-panel h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #fff;
+        }
+
+        .property-group {
+            margin-bottom: 20px;
+        }
+
+        .property-label {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 6px;
+        }
+
+        .property-input, .property-select {
+            width: 100%;
+            padding: 8px 12px;
+            background: #222;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #e0e0e0;
+            font-size: 13px;
+        }
+
+        .property-input:focus, .property-select:focus {
+            outline: none;
+            border-color: #4a9eff;
+        }
+
+        .property-button {
+            width: 100%;
+            padding: 10px;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .property-button:hover {
+            background: #333;
+            border-color: #4a9eff;
+        }
+
+        .property-button.primary {
+            background: #4a9eff;
+            border-color: #4a9eff;
+            color: #fff;
+        }
+
+        .property-button.primary:hover {
+            background: #3a8eef;
+        }
+
+        .empty-state {
+            color: #666;
+            font-size: 12px;
+            font-style: italic;
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .connection-mode {
+            background: #2a4a2a !important;
+            border-color: #4a9e4a !important;
+        }
+
+        .connection-mode:hover {
+            background: #3a5a3a !important;
+        }
+
+        /* Preview Modal */
+        .preview-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000000ee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .preview-container {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 90vw;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #333;
+        }
+
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .preview-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .preview-close {
+            padding: 8px 16px;
+            background: #333;
+            border: 1px solid #444;
+            border-radius: 6px;
+            color: #e0e0e0;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .preview-close:hover {
+            background: #444;
+        }
+
+        .preview-frame {
+            width: 800px;
+            height: 600px;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background: #fff;
+            position: relative;
+        }
+
+        .preview-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* Keyboard shortcuts help */
+        .shortcuts-help {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: #1a1a1aee;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            backdrop-filter: blur(10px);
+            font-size: 11px;
+            color: #888;
+            pointer-events: none;
+        }
+
+        .shortcuts-help strong {
+            color: #e0e0e0;
+        }
+
+        /* Connection indicator */
+        .connection-indicator {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: #2a4a2aee;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid #4a9e4a;
+            backdrop-filter: blur(10px);
+            font-size: 12px;
+            color: #4aff9e;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        /* Auto-save indicator */
+        .autosave-indicator {
+            padding: 4px 8px;
+            background: #2a2a2a;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #4aff9e;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #444;
+        }
+
+        /* Disclaimer */
+        .disclaimer {
+            padding: 12px 16px;
+            background: #2a2a1a;
+            border: 1px solid #4a4a2a;
+            border-radius: 6px;
+            font-size: 11px;
+            color: #888;
+            line-height: 1.6;
+        }
+
+        .disclaimer strong {
+            color: #e0e0e0;
+        }
+
+        .disclaimer a {
+            color: #4a9eff;
+            text-decoration: none;
+        }
+
+        .disclaimer a:hover {
+            text-decoration: underline;
+        }
+
+        .stats {
+            margin-top: 12px;
+            padding: 12px;
+            background: #222;
+            border-radius: 6px;
+            font-size: 11px;
+            color: #888;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 4px 0;
+        }
+
+        .stats-label {
+            color: #666;
+        }
+
+        .stats-value {
+            color: #e0e0e0;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback } = React;
+
+        // Mock data structure matching your generative-art folder
+        const MOCK_FILE_STRUCTURE = {
+            experiments: [
+                { name: '2_x_2', path: 'experiments/2_x_2_2026_01_16_16_53_05', type: 'p5js' },
+                { name: 'bloom_1-3-26', path: 'experiments/bloom_1-3-26_2026_01_16_16_53_54', type: 'p5js' },
+                { name: 'bloom_animation', path: 'experiments/bloom_12-11-2025_animation_2026_01_16_16_55_15', type: 'p5js' },
+                { name: 'disks_interactive', path: 'experiments/_disks__Interactive_p5js_2026_01_16_16_54_31', type: 'p5js' },
+                { name: 'rotate_w_DNA', path: 'experiments/886__rotate__w_DNA___Sliders_2026_01_16_16_54_53', type: 'p5js' },
+                { name: 'rotate_wo_DNA', path: 'experiments/886__rotate__wo_DNA___Sliders_2026_01_16_16_54_56', type: 'p5js' },
+            ],
+            projects: [
+                { name: 'fluid-particles', path: 'projects/fluid-particles', type: 'p5js' },
+                { name: 'shelves-webgl', path: 'projects/shelves-webgl', type: 'p5js' },
+                { name: 'collective-architecture', path: 'projects/collective-architecture', type: 'p5js' },
+                { name: 'intersection-commons', path: 'projects/intersection-commons', type: 'p5js' },
+            ],
+            installations: []
+        };
+
+        // Auto-save hook
+        function useAutoSave(projectName, blocks, connections) {
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    const project = {
+                        name: projectName,
+                        version: '1.0',
+                        updated: new Date().toISOString(),
+                        blocks,
+                        connections
+                    };
+                    localStorage.setItem('installation-composer-autosave', JSON.stringify(project));
+                }, 2000);
+
+                return () => clearTimeout(timer);
+            }, [projectName, blocks, connections]);
+        }
+
+        function FileBrowser() {
+            const [expanded, setExpanded] = useState({
+                experiments: true,
+                projects: true,
+                installations: false
+            });
+
+            const handleDragStart = (e, sketch) => {
+                e.dataTransfer.setData('sketch', JSON.stringify(sketch));
+            };
+
+            return (
+                <div className="file-browser">
+                    {Object.entries(MOCK_FILE_STRUCTURE).map(([folderName, items]) => (
+                        <div key={folderName} className="folder">
+                            <div 
+                                className="folder-header"
+                                onClick={() => setExpanded({...expanded, [folderName]: !expanded[folderName]})}
+                            >
+                                <span className="folder-icon">
+                                    {expanded[folderName] ? '📂' : '📁'}
+                                </span>
+                                <span className="folder-name">{folderName}</span>
+                                <span className="folder-count">({items.length})</span>
+                            </div>
+                            {expanded[folderName] && (
+                                <div className="folder-items">
+                                    {items.length === 0 ? (
+                                        <div className="empty-state">No items</div>
+                                    ) : (
+                                        items.map(sketch => (
+                                            <div
+                                                key={sketch.path}
+                                                className="sketch-item"
+                                                draggable
+                                                onDragStart={(e) => handleDragStart(e, sketch)}
+                                            >
+                                                <div className="sketch-name">🎨 {sketch.name}</div>
+                                                <div className="sketch-path">{sketch.path}</div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        function BlocksPalette() {
+            const handleDragStart = (e, blockType) => {
+                e.dataTransfer.setData('blockType', blockType);
+            };
+
+            return (
+                <div className="blocks-palette">
+                    <div 
+                        className="palette-block"
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, 'screen')}
+                    >
+                        <div className="palette-icon">🖥️</div>
+                        <div className="palette-label">Screen</div>
+                        <div className="palette-desc">Physical display</div>
+                    </div>
+                    <div 
+                        className="palette-block"
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, 'artwork')}
+                    >
+                        <div className="palette-icon">🎨</div>
+                        <div className="palette-label">Artwork</div>
+                        <div className="palette-desc">P5.js sketch</div>
+                    </div>
+                    <div 
+                        className="palette-block"
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, 'input')}
+                    >
+                        <div className="palette-icon">🎚️</div>
+                        <div className="palette-label">Input</div>
+                        <div className="palette-desc">Sensor/control</div>
+                    </div>
+                    <div 
+                        className="palette-block"
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, 'logic')}
+                    >
+                        <div className="palette-icon">⚙️</div>
+                        <div className="palette-label">Logic</div>
+                        <div className="palette-desc">Data mapping</div>
+                    </div>
+                </div>
+            );
+        }
+
+        function PropertiesPanel({ selectedBlock, onUpdateBlock, onDeleteBlock, onPreview }) {
+            if (!selectedBlock) {
+                return (
+                    <div className="properties-panel">
+                        <h3>Properties</h3>
+                        <div className="empty-state">
+                            Select a block to edit its properties
+                        </div>
+                        
+                        <div className="disclaimer">
+                            <strong>⚠️ PERSONAL TOOL</strong><br/>
+                            Built by Mark Walhimer for my own workflow. Use at your own risk. No support provided.
+                        </div>
+                    </div>
+                );
+            }
+
+            const handleChange = (field, value) => {
+                onUpdateBlock(selectedBlock.id, { [field]: value });
+            };
+
+            return (
+                <div className="properties-panel">
+                    <h3>{selectedBlock.type.toUpperCase()} Properties</h3>
+                    
+                    <div className="property-group">
+                        <div className="property-label">Name</div>
+                        <input
+                            type="text"
+                            className="property-input"
+                            value={selectedBlock.name}
+                            onChange={(e) => handleChange('name', e.target.value)}
+                        />
+                    </div>
+
+                    {selectedBlock.type === 'screen' && (
+                        <>
+                            <div className="property-group">
+                                <div className="property-label">Resolution Width</div>
+                                <input
+                                    type="number"
+                                    className="property-input"
+                                    value={selectedBlock.resolution.width}
+                                    onChange={(e) => handleChange('resolution', {
+                                        ...selectedBlock.resolution,
+                                        width: parseInt(e.target.value) || 0
+                                    })}
+                                />
+                            </div>
+                            <div className="property-group">
+                                <div className="property-label">Resolution Height</div>
+                                <input
+                                    type="number"
+                                    className="property-input"
+                                    value={selectedBlock.resolution.height}
+                                    onChange={(e) => handleChange('resolution', {
+                                        ...selectedBlock.resolution,
+                                        height: parseInt(e.target.value) || 0
+                                    })}
+                                />
+                            </div>
+                            <div className="property-group">
+                                <div className="property-label">Orientation</div>
+                                <select
+                                    className="property-select"
+                                    value={selectedBlock.orientation}
+                                    onChange={(e) => handleChange('orientation', e.target.value)}
+                                >
+                                    <option value="landscape">Landscape</option>
+                                    <option value="portrait">Portrait</option>
+                                </select>
+                            </div>
+                            <div className="property-group">
+                                <div className="property-label">Physical Location Notes</div>
+                                <input
+                                    type="text"
+                                    className="property-input"
+                                    value={selectedBlock.location || ''}
+                                    onChange={(e) => handleChange('location', e.target.value)}
+                                    placeholder="e.g., Main gallery wall"
+                                />
+                            </div>
+                        </>
+                    )}
+
+                    {selectedBlock.type === 'artwork' && (
+                        <>
+                            <div className="property-group">
+                                <div className="property-label">Sketch Path</div>
+                                <input
+                                    type="text"
+                                    className="property-input"
+                                    value={selectedBlock.sketchPath || ''}
+                                    readOnly
+                                    placeholder="Drag a sketch from files"
+                                />
+                            </div>
+                            {selectedBlock.sketchPath && (
+                                <div className="property-group">
+                                    <button 
+                                        className="property-button primary"
+                                        onClick={() => onPreview(selectedBlock)}
+                                    >
+                                        👁️ Preview Sketch
+                                    </button>
+                                </div>
+                            )}
+                            <div className="property-group">
+                                <div className="property-label">Notes</div>
+                                <input
+                                    type="text"
+                                    className="property-input"
+                                    value={selectedBlock.notes || ''}
+                                    onChange={(e) => handleChange('notes', e.target.value)}
+                                    placeholder="Parameters, adjustments, etc."
+                                />
+                            </div>
+                        </>
+                    )}
+
+                    {selectedBlock.type === 'input' && (
+                        <>
+                            <div className="property-group">
+                                <div className="property-label">Input Type</div>
+                                <select
+                                    className="property-select"
+                                    value={selectedBlock.inputType}
+                                    onChange={(e) => handleChange('inputType', e.target.value)}
+                                >
+                                    <option value="motion">Motion Sensor</option>
+                                    <option value="proximity">Proximity Sensor</option>
+                                    <option value="sound">Sound Level</option>
+                                    <option value="touch">Touch/Button</option>
+                                    <option value="time">Time of Day</option>
+                                    <option value="camera">Camera/CV</option>
+                                    <option value="slider">Slider (Sim)</option>
+                                    <option value="osc">OSC Network</option>
+                                </select>
+                            </div>
+                            <div className="property-group">
+                                <div className="property-label">Hardware Notes</div>
+                                <input
+                                    type="text"
+                                    className="property-input"
+                                    value={selectedBlock.hardware || ''}
+                                    onChange={(e) => handleChange('hardware', e.target.value)}
+                                    placeholder="e.g., GPIO pin 4, Arduino serial"
+                                />
+                            </div>
+                        </>
+                    )}
+
+                    {selectedBlock.type === 'logic' && (
+                        <>
+                            <div className="property-group">
+                                <div className="property-label">Mapping Type</div>
+                                <select
+                                    className="property-select"
+                                    value={selectedBlock.mappingType || 'linear'}
+                                    onChange={(e) => handleChange('mappingType', e.target.value)}
+                                >
+                                    <option value="linear">Linear</option>
+                                    <option value="ease">Ease In/Out</option>
+                                    <option value="threshold">Threshold</option>
+                                    <option value="smooth">Smoothing</option>
+                                </select>
+                            </div>
+                            <div className="property-group">
+                                <div className="property-label">Configuration</div>
+                                <input
+                                    type="text"
+                                    className="property-input"
+                                    value={selectedBlock.config || ''}
+                                    onChange={(e) => handleChange('config', e.target.value)}
+                                    placeholder="e.g., min:0, max:100"
+                                />
+                            </div>
+                        </>
+                    )}
+
+                    <div className="property-group" style={{marginTop: '32px', paddingTop: '20px', borderTop: '1px solid #333'}}>
+                        <button 
+                            className="property-button danger"
+                            onClick={() => onDeleteBlock(selectedBlock.id)}
+                        >
+                            🗑️ Delete Block
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        function Canvas({ blocks, connections, selectedBlockId, onBlockClick, onBlockMove, onCanvasDrop }) {
+            const canvasRef = useRef(null);
+            const [dragging, setDragging] = useState(null);
+            const [offset, setOffset] = useState({ x: 0, y: 0 });
+            const [pan, setPan] = useState({ x: 0, y: 0 });
+            const [isPanning, setIsPanning] = useState(false);
+            const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+
+            const draw = useCallback(() => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+
+                const ctx = canvas.getContext('2d');
+                const rect = canvas.getBoundingClientRect();
+                
+                // Set canvas size
+                canvas.width = rect.width * window.devicePixelRatio;
+                canvas.height = rect.height * window.devicePixelRatio;
+                ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+                // Clear canvas
+                ctx.clearRect(0, 0, rect.width, rect.height);
+
+                // Draw grid
+                ctx.strokeStyle = '#1a1a1a';
+                ctx.lineWidth = 1;
+                for (let x = pan.x % 100; x < rect.width; x += 100) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, rect.height);
+                    ctx.stroke();
+                }
+                for (let y = pan.y % 100; y < rect.height; y += 100) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(rect.width, y);
+                    ctx.stroke();
+                }
+
+                // Draw connections
+                ctx.strokeStyle = '#4a9eff';
+                ctx.lineWidth = 2;
+                connections.forEach(conn => {
+                    const fromBlock = blocks.find(b => b.id === conn.from);
+                    const toBlock = blocks.find(b => b.id === conn.to);
+                    
+                    if (fromBlock && toBlock) {
+                        const x1 = fromBlock.x + fromBlock.width + pan.x;
+                        const y1 = fromBlock.y + fromBlock.height / 2 + pan.y;
+                        const x2 = toBlock.x + pan.x;
+                        const y2 = toBlock.y + toBlock.height / 2 + pan.y;
+
+                        // Draw connection line with arrow
+                        ctx.globalAlpha = 0.6;
+                        ctx.beginPath();
+                        ctx.moveTo(x1, y1);
+                        ctx.bezierCurveTo(
+                            x1 + (x2 - x1) / 3, y1,
+                            x2 - (x2 - x1) / 3, y2,
+                            x2, y2
+                        );
+                        ctx.stroke();
+
+                        // Draw arrow
+                        const angle = Math.atan2(y2 - y1, x2 - x1);
+                        ctx.beginPath();
+                        ctx.moveTo(x2, y2);
+                        ctx.lineTo(x2 - 10 * Math.cos(angle - Math.PI / 6), y2 - 10 * Math.sin(angle - Math.PI / 6));
+                        ctx.lineTo(x2 - 10 * Math.cos(angle + Math.PI / 6), y2 - 10 * Math.sin(angle + Math.PI / 6));
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.globalAlpha = 1;
+                    }
+                });
+
+                // Draw blocks
+                blocks.forEach(block => {
+                    const x = block.x + pan.x;
+                    const y = block.y + pan.y;
+                    const isSelected = block.id === selectedBlockId;
+                    
+                    // Shadow
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                    
+                    // Block background
+                    ctx.fillStyle = dragging?.id === block.id ? '#2a2a2a' : '#1a1a1a';
+                    ctx.strokeStyle = isSelected ? '#4a9eff' : '#444';
+                    ctx.lineWidth = isSelected ? 3 : 2;
+                    
+                    // Rounded rectangle
+                    const radius = 8;
+                    ctx.beginPath();
+                    ctx.moveTo(x + radius, y);
+                    ctx.lineTo(x + block.width - radius, y);
+                    ctx.quadraticCurveTo(x + block.width, y, x + block.width, y + radius);
+                    ctx.lineTo(x + block.width, y + block.height - radius);
+                    ctx.quadraticCurveTo(x + block.width, y + block.height, x + block.width - radius, y + block.height);
+                    ctx.lineTo(x + radius, y + block.height);
+                    ctx.quadraticCurveTo(x, y + block.height, x, y + block.height - radius);
+                    ctx.lineTo(x, y + radius);
+                    ctx.quadraticCurveTo(x, y, x + radius, y);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.shadowBlur = 0;
+
+                    // Icon and text
+                    const icons = {
+                        screen: '🖥️',
+                        artwork: '🎨',
+                        input: '🎚️',
+                        logic: '⚙️'
+                    };
+                    
+                    ctx.font = '32px Arial';
+                    ctx.fillText(icons[block.type] || '❓', x + 16, y + 45);
+                    
+                    ctx.font = 'bold 16px Arial';
+                    ctx.fillStyle = '#e0e0e0';
+                    ctx.fillText(block.name, x + 16, y + 75);
+                    
+                    // Additional info
+                    ctx.font = '12px Arial';
+                    ctx.fillStyle = '#888';
+                    if (block.type === 'screen') {
+                        ctx.fillText(`${block.resolution.width} × ${block.resolution.height}`, x + 16, y + 95);
+                    } else if (block.type === 'artwork' && block.sketchPath) {
+                        const shortPath = block.sketchPath.split('/').pop();
+                        ctx.fillText(shortPath.substring(0, 20), x + 16, y + 95);
+                    } else if (block.type === 'input') {
+                        ctx.fillText(block.inputType, x + 16, y + 95);
+                    } else if (block.type === 'logic') {
+                        ctx.fillText(block.mappingType || 'mapping', x + 16, y + 95);
+                    }
+                });
+
+            }, [blocks, connections, selectedBlockId, dragging, pan]);
+
+            useEffect(() => {
+                draw();
+            }, [draw]);
+
+            const handleMouseDown = (e) => {
+                const rect = canvasRef.current.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                // Check if clicking on a block
+                for (let i = blocks.length - 1; i >= 0; i--) {
+                    const block = blocks[i];
+                    const bx = block.x + pan.x;
+                    const by = block.y + pan.y;
+                    
+                    if (x >= bx && x <= bx + block.width && y >= by && y <= by + block.height) {
+                        setDragging(block);
+                        setOffset({ x: x - bx, y: y - by });
+                        onBlockClick(block);
+                        return;
+                    }
+                }
+
+                // Start panning
+                setIsPanning(true);
+                setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+            };
+
+            const handleMouseMove = (e) => {
+                if (dragging) {
+                    const rect = canvasRef.current.getBoundingClientRect();
+                    const x = e.clientX - rect.left - offset.x - pan.x;
+                    const y = e.clientY - rect.top - offset.y - pan.y;
+                    onBlockMove(dragging.id, x, y);
+                } else if (isPanning) {
+                    setPan({
+                        x: e.clientX - panStart.x,
+                        y: e.clientY - panStart.y
+                    });
+                }
+            };
+
+            const handleMouseUp = () => {
+                setDragging(null);
+                setIsPanning(false);
+            };
+
+            const handleDrop = (e) => {
+                e.preventDefault();
+                const rect = canvasRef.current.getBoundingClientRect();
+                const x = e.clientX - rect.left - pan.x;
+                const y = e.clientY - rect.top - pan.y;
+                onCanvasDrop(e, x, y);
+            };
+
+            return (
+                <canvas
+                    ref={canvasRef}
+                    style={{ 
+                        width: '100%', 
+                        height: '100%', 
+                        cursor: dragging ? 'grabbing' : isPanning ? 'grabbing' : 'grab' 
+                    }}
+                    onMouseDown={handleMouseDown}
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUp}
+                    onMouseLeave={handleMouseUp}
+                    onDrop={handleDrop}
+                    onDragOver={(e) => e.preventDefault()}
+                />
+            );
+        }
+
+        function PreviewModal({ block, onClose }) {
+            if (!block) return null;
+
+            return (
+                <div className="preview-modal" onClick={onClose}>
+                    <div className="preview-container" onClick={(e) => e.stopPropagation()}>
+                        <div className="preview-header">
+                            <div className="preview-title">
+                                Preview: {block.name}
+                            </div>
+                            <button className="preview-close" onClick={onClose}>
+                                Close
+                            </button>
+                        </div>
+                        <div className="preview-frame">
+                            <div className="preview-placeholder">
+                                <div style={{textAlign: 'center'}}>
+                                    <div style={{fontSize: '48px', marginBottom: '16px'}}>🎨</div>
+                                    <div>Sketch: {block.sketchPath}</div>
+                                    <div style={{marginTop: '16px', fontSize: '12px', color: '#666'}}>
+                                        In the desktop version, this will show a live P5.js preview
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function App() {
+            const [projectName, setProjectName] = useState('Untitled Installation');
+            const [blocks, setBlocks] = useState([]);
+            const [connections, setConnections] = useState([]);
+            const [selectedBlockId, setSelectedBlockId] = useState(null);
+            const [activeTab, setActiveTab] = useState('files');
+            const [connectionMode, setConnectionMode] = useState(false);
+            const [connectionStart, setConnectionStart] = useState(null);
+            const [previewBlock, setPreviewBlock] = useState(null);
+            const [lastSaved, setLastSaved] = useState(null);
+
+            const nextId = useRef(1);
+
+            // Auto-save
+            useAutoSave(projectName, blocks, connections);
+
+            // Load autosave on mount
+            useEffect(() => {
+                const saved = localStorage.getItem('installation-composer-autosave');
+                if (saved && blocks.length === 0) {
+                    try {
+                        const project = JSON.parse(saved);
+                        if (confirm('Load auto-saved project?')) {
+                            setProjectName(project.name);
+                            setBlocks(project.blocks || []);
+                            setConnections(project.connections || []);
+                            if (project.blocks && project.blocks.length > 0) {
+                                nextId.current = Math.max(...project.blocks.map(b => parseInt(b.id.split('-')[1])), 0) + 1;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Failed to load autosave', e);
+                    }
+                }
+            }, []);
+
+            // Keyboard shortcuts
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    // Delete selected block
+                    if (e.key === 'Delete' && selectedBlockId) {
+                        handleDeleteBlock(selectedBlockId);
+                    }
+                    // Escape to deselect
+                    if (e.key === 'Escape') {
+                        setSelectedBlockId(null);
+                        setConnectionMode(false);
+                        setConnectionStart(null);
+                    }
+                };
+
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, [selectedBlockId]);
+
+            const createBlock = (type, x = 100, y = 100, additionalProps = {}) => {
+                const baseBlock = {
+                    id: `block-${nextId.current++}`,
+                    type,
+                    x,
+                    y,
+                    width: 200,
+                    height: 120,
+                    ...additionalProps
+                };
+
+                switch (type) {
+                    case 'screen':
+                        return {
+                            ...baseBlock,
+                            name: `Screen ${blocks.filter(b => b.type === 'screen').length + 1}`,
+                            resolution: { width: 1920, height: 1080 },
+                            orientation: 'landscape',
+                            location: ''
+                        };
+                    case 'artwork':
+                        return {
+                            ...baseBlock,
+                            name: additionalProps.name || `Artwork ${blocks.filter(b => b.type === 'artwork').length + 1}`,
+                            sketchPath: additionalProps.sketchPath || null,
+                            notes: ''
+                        };
+                    case 'input':
+                        return {
+                            ...baseBlock,
+                            name: `Input ${blocks.filter(b => b.type === 'input').length + 1}`,
+                            inputType: 'motion',
+                            hardware: ''
+                        };
+                    case 'logic':
+                        return {
+                            ...baseBlock,
+                            name: `Logic ${blocks.filter(b => b.type === 'logic').length + 1}`,
+                            mappingType: 'linear',
+                            config: ''
+                        };
+                    default:
+                        return baseBlock;
+                }
+            };
+
+            const handleCanvasDrop = (e, x, y) => {
+                // Check if dropping a block type
+                const blockType = e.dataTransfer.getData('blockType');
+                if (blockType) {
+                    const newBlock = createBlock(blockType, x, y);
+                    setBlocks([...blocks, newBlock]);
+                    return;
+                }
+
+                // Check if dropping a sketch
+                const sketchData = e.dataTransfer.getData('sketch');
+                if (sketchData) {
+                    const sketch = JSON.parse(sketchData);
+                    const newBlock = createBlock('artwork', x, y, {
+                        name: sketch.name,
+                        sketchPath: sketch.path
+                    });
+                    setBlocks([...blocks, newBlock]);
+                }
+            };
+
+            const handleBlockMove = (id, x, y) => {
+                setBlocks(blocks.map(block => 
+                    block.id === id ? { ...block, x, y } : block
+                ));
+            };
+
+            const handleBlockClick = (block) => {
+                if (connectionMode) {
+                    if (!connectionStart) {
+                        setConnectionStart(block.id);
+                    } else {
+                        // Create connection
+                        const newConnection = {
+                            id: `conn-${Date.now()}`,
+                            from: connectionStart,
+                            to: block.id
+                        };
+                        setConnections([...connections, newConnection]);
+                        setConnectionStart(null);
+                        setConnectionMode(false);
+                    }
+                } else {
+                    setSelectedBlockId(block.id);
+                }
+            };
+
+            const handleUpdateBlock = (id, updates) => {
+                setBlocks(blocks.map(block =>
+                    block.id === id ? { ...block, ...updates } : block
+                ));
+            };
+
+            const handleDeleteBlock = (id) => {
+                setBlocks(blocks.filter(b => b.id !== id));
+                setConnections(connections.filter(c => c.from !== id && c.to !== id));
+                if (selectedBlockId === id) {
+                    setSelectedBlockId(null);
+                }
+            };
+
+            const handleSaveProject = () => {
+                const project = {
+                    name: projectName,
+                    version: '1.0',
+                    created: new Date().toISOString(),
+                    blocks,
+                    connections,
+                    metadata: {
+                        blockCount: blocks.length,
+                        connectionCount: connections.length,
+                        screens: blocks.filter(b => b.type === 'screen').length,
+                        artworks: blocks.filter(b => b.type === 'artwork').length,
+                        inputs: blocks.filter(b => b.type === 'input').length
+                    }
+                };
+                
+                const json = JSON.stringify(project, null, 2);
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${projectName.toLowerCase().replace(/\s+/g, '-')}.json`;
+                a.click();
+                
+                setLastSaved(new Date());
+                alert('Project saved successfully!');
+            };
+
+            const handleLoadProject = () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const project = JSON.parse(event.target.result);
+                            setProjectName(project.name);
+                            setBlocks(project.blocks || []);
+                            setConnections(project.connections || []);
+                            nextId.current = Math.max(...project.blocks.map(b => parseInt(b.id.split('-')[1])), 0) + 1;
+                            alert('Project loaded successfully!');
+                        } catch (err) {
+                            alert('Error loading project file');
+                        }
+                    };
+                    reader.readAsText(file);
+                };
+                input.click();
+            };
+
+            const handleClearCanvas = () => {
+                if (confirm('Clear all blocks and connections? This cannot be undone.')) {
+                    setBlocks([]);
+                    setConnections([]);
+                    setSelectedBlockId(null);
+                }
+            };
+
+            const handleExport = () => {
+                const exportPackage = {
+                    installation: {
+                        name: projectName,
+                        version: '1.0',
+                        exported: new Date().toISOString(),
+                        screens: blocks.filter(b => b.type === 'screen').map(s => ({
+                            id: s.id,
+                            name: s.name,
+                            resolution: s.resolution,
+                            orientation: s.orientation,
+                            location: s.location,
+                            artworks: connections
+                                .filter(c => c.to === s.id)
+                                .map(c => blocks.find(b => b.id === c.from))
+                                .filter(b => b && b.type === 'artwork')
+                                .map(a => ({
+                                    name: a.name,
+                                    path: a.sketchPath,
+                                    notes: a.notes
+                                }))
+                        })),
+                        inputs: blocks.filter(b => b.type === 'input').map(i => ({
+                            id: i.id,
+                            name: i.name,
+                            type: i.inputType,
+                            hardware: i.hardware,
+                            connectedTo: connections
+                                .filter(c => c.from === i.id)
+                                .map(c => blocks.find(b => b.id === c.to)?.name)
+                        })),
+                        mappings: connections.map(c => {
+                            const from = blocks.find(b => b.id === c.from);
+                            const to = blocks.find(b => b.id === c.to);
+                            return {
+                                from: from?.name,
+                                to: to?.name,
+                                fromType: from?.type,
+                                toType: to?.type
+                            };
+                        })
+                    },
+                    readme: `# ${projectName}\n\nInstallation exported: ${new Date().toISOString()}\n\n## Screens\n${blocks.filter(b => b.type === 'screen').map(s => `- ${s.name}: ${s.resolution.width}x${s.resolution.height}`).join('\n')}\n\n## Artworks\n${blocks.filter(b => b.type === 'artwork').map(a => `- ${a.name}: ${a.sketchPath}`).join('\n')}\n\n## Setup Instructions\n\n1. Copy artwork folders to installation directory\n2. Configure inputs according to hardware notes\n3. Map connections as specified in installation.json\n4. Test each screen individually before full deployment\n`
+                };
+
+                const json = JSON.stringify(exportPackage, null, 2);
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${projectName.toLowerCase().replace(/\s+/g, '-')}-export.json`;
+                a.click();
+
+                alert('Installation package exported! This includes deployment configuration and setup instructions.');
+            };
+
+            const selectedBlock = blocks.find(b => b.id === selectedBlockId);
+
+            return (
+                <div className="app-container">
+                    <div className="sidebar">
+                        <div className="sidebar-header">
+                            <h1>Installation Composer</h1>
+                            <div className="subtitle">by Mark Walhimer</div>
+                            <p>Compose generative art installations visually</p>
+                        </div>
+                        
+                        <div className="sidebar-tabs">
+                            <button 
+                                className={`sidebar-tab ${activeTab === 'files' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('files')}
+                            >
+                                📁 Files
+                            </button>
+                            <button 
+                                className={`sidebar-tab ${activeTab === 'blocks' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('blocks')}
+                            >
+                                🧩 Blocks
+                            </button>
+                            <button 
+                                className={`sidebar-tab ${activeTab === 'info' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('info')}
+                            >
+                                ℹ️ Info
+                            </button>
+                        </div>
+
+                        <div className="sidebar-content">
+                            {activeTab === 'files' && <FileBrowser />}
+                            {activeTab === 'blocks' && <BlocksPalette />}
+                            {activeTab === 'info' && (
+                                <div>
+                                    <div className="stats">
+                                        <div className="stats-row">
+                                            <span className="stats-label">Blocks:</span>
+                                            <span className="stats-value">{blocks.length}</span>
+                                        </div>
+                                        <div className="stats-row">
+                                            <span className="stats-label">Connections:</span>
+                                            <span className="stats-value">{connections.length}</span>
+                                        </div>
+                                        <div className="stats-row">
+                                            <span className="stats-label">Screens:</span>
+                                            <span className="stats-value">{blocks.filter(b => b.type === 'screen').length}</span>
+                                        </div>
+                                        <div className="stats-row">
+                                            <span className="stats-label">Artworks:</span>
+                                            <span className="stats-value">{blocks.filter(b => b.type === 'artwork').length}</span>
+                                        </div>
+                                        <div className="stats-row">
+                                            <span className="stats-label">Inputs:</span>
+                                            <span className="stats-value">{blocks.filter(b => b.type === 'input').length}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="disclaimer" style={{marginTop: '20px'}}>
+                                        <strong>⚠️ PERSONAL TOOL - NO SUPPORT</strong><br/><br/>
+                                        This tool was built by Mark Walhimer for my own generative art workflow. I'm sharing it in case it's useful to others, but:<br/><br/>
+                                        • No support provided<br/>
+                                        • No guarantees it works for you<br/>
+                                        • I won't answer questions or fix bugs<br/>
+                                        • Built for MY process, not yours<br/><br/>
+                                        If you find it helpful, cool. If not, that's fine too.
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="canvas-container">
+                        <div className="canvas-toolbar">
+                            <div className="toolbar-group">
+                                <span className="project-name">{projectName}</span>
+                                {lastSaved && (
+                                    <span className="autosave-indicator">
+                                        ✓ Saved
+                                    </span>
+                                )}
+                            </div>
+                            
+                            <div className="toolbar-group">
+                                <button className="toolbar-button" onClick={handleSaveProject}>
+                                    💾 Save
+                                </button>
+                                <button className="toolbar-button" onClick={handleLoadProject}>
+                                    📂 Load
+                                </button>
+                                <button className="toolbar-button primary" onClick={handleExport}>
+                                    📦 Export
+                                </button>
+                            </div>
+
+                            <div className="toolbar-group">
+                                <button 
+                                    className={`toolbar-button ${connectionMode ? 'connection-mode' : ''}`}
+                                    onClick={() => {
+                                        setConnectionMode(!connectionMode);
+                                        setConnectionStart(null);
+                                    }}
+                                >
+                                    🔗 {connectionMode ? 'Connecting...' : 'Connect'}
+                                </button>
+                                <button className="toolbar-button danger" onClick={handleClearCanvas}>
+                                    🗑️ Clear
+                                </button>
+                            </div>
+                        </div>
+
+                        <Canvas
+                            blocks={blocks}
+                            connections={connections}
+                            selectedBlockId={selectedBlockId}
+                            onBlockClick={handleBlockClick}
+                            onBlockMove={handleBlockMove}
+                            onCanvasDrop={handleCanvasDrop}
+                        />
+
+                        {!connectionMode && (
+                            <div className="shortcuts-help">
+                                <strong>Shortcuts:</strong> Delete = remove block • Esc = deselect • Drag canvas to pan
+                            </div>
+                        )}
+
+                        {connectionMode && connectionStart && (
+                            <div className="connection-indicator">
+                                Click the target block to complete connection
+                            </div>
+                        )}
+                    </div>
+
+                    <PropertiesPanel
+                        selectedBlock={selectedBlock}
+                        onUpdateBlock={handleUpdateBlock}
+                        onDeleteBlock={handleDeleteBlock}
+                        onPreview={(block) => setPreviewBlock(block)}
+                    />
+
+                    {previewBlock && (
+                        <PreviewModal
+                            block={previewBlock}
+                            onClose={() => setPreviewBlock(null)}
+                        />
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
